@@ -18,15 +18,15 @@
 
 ```mermaid
 graph TD
-    A[📄 Land Record Upload / Sample Khatauni] --> B[Sarvam Doc-AI / Local Fallback]
-    B --> C[4 Key Parsed Metrics<br>खातेदार | ग्राम/तहसील | खसरा नं० | दर्ज क्षेत्रफल]
-    D[🎙️ Citizen Hindi/Hinglish Voice Query<br>st.audio_input] --> E[Sarvam Saaras v4 STT<br>mode: codemix]
-    E --> F[Transcribed Query in Hindi]
-    F --> G[Sarvam-105B Grounded Reasoning LLM<br>Strict Guardrail Prompt]
-    C -.Context.-> G
-    G --> H[Spoken Hindi Answer<br><2 Sentences, Grounded]
-    H --> I[Sarvam Bulbul v3 TTS<br>Speaker: Shubh / Meera]
-    I --> J[🔊 Audio Playback & Grounded Source Inspector]
+    A["📄 Land Record Upload / Sample Khatauni"] --> B["Sarvam Doc-AI / Local Fallback"]
+    B --> C["4 Key Parsed Metrics (खातेदार, ग्राम/तहसील, खसरा नं०, दर्ज क्षेत्रफल)"]
+    D["🎙️ Citizen Hindi/Hinglish Voice Query (st.audio_input)"] --> E["Sarvam Saaras v4 STT (mode: codemix)"]
+    E --> F["Transcribed Query in Hindi"]
+    F --> G["Sarvam-105B Grounded Reasoning LLM (Strict Guardrails)"]
+    C -.->|Context| G
+    G --> H["Spoken Hindi Answer (Under 2 Sentences, Grounded)"]
+    H --> I["Sarvam Bulbul v3 TTS (Speaker: Shubh / Meera)"]
+    I --> J["🔊 Audio Playback & Grounded Source Inspector"]
 ```
 
 ---
