@@ -2,10 +2,13 @@
 
 **Assistive Voice Agent for Indian Land Records (Khatauni / Patta) Powered by Sarvam AI & Streamlit**
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://bhoomivoice.streamlit.app/)
 [![Sarvam AI](https://img.shields.io/badge/Powered%20By-Sarvam%20AI-orange.svg)](https://docs.sarvam.ai)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.36%2B-red.svg)](https://streamlit.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> 🌐 **Live Demo Application:** [https://bhoomivoice.streamlit.app/](https://bhoomivoice.streamlit.app/)
 
 ---
 
