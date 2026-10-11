@@ -50,42 +50,106 @@ def load_sample_record() -> Dict[str, Any]:
     }
 
 
+LAND_RECORD_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "khatedar": {
+            "type": "string",
+            "description": "Name of the recorded land holder / owner and father or husband name (खातेदार का नाम व पिता/पति का नाम)"
+        },
+        "village_tehsil": {
+            "type": "string",
+            "description": "Village name, tehsil, and district (ग्राम, तहसील, जनपद)"
+        },
+        "khasra_no": {
+            "type": "string",
+            "description": "Khasra or Gata number (खसरा / गाटा संख्या)"
+        },
+        "recorded_area": {
+            "type": "string",
+            "description": "Recorded area in hectares or acres (दर्ज क्षेत्रफल / रकबा)"
+        },
+        "khata_number": {
+            "type": "string",
+            "description": "Khata account number (खाता संख्या)"
+        },
+        "fasli_year": {
+            "type": "string",
+            "description": "Fasli year (फसली वर्ष)"
+        },
+        "land_category": {
+            "type": "string",
+            "description": "Category of land tenure (भूमि श्रेणी / किस्म)"
+        },
+        "revenue_tax": {
+            "type": "string",
+            "description": "Annual land revenue or tax payable (देय भू-राजस्व / लगान)"
+        },
+        "remarks": {
+            "type": "string",
+            "description": "Orders, mortgages, court stays, or remarks (कैफियत / आदेश / बंधक)"
+        }
+    }
+}
+
+
 def extract_document_data(uploaded_file, api_key: str) -> Tuple[Dict[str, Any], bool, str]:
     """
-    Attempt to extract document fields via Sarvam Doc AI API.
-    Guaranteed immediate fallback to sample_data.json on failure or timeout.
+    Extract real document fields dynamically via Sarvam Doc AI API with schema and polling.
+    Falls back to sample_data.json only if the API call fails or times out.
     Returns: (record_data, is_fallback, status_message)
     """
     if not api_key:
         return load_sample_record(), True, "API Key अनुपलब्ध है - स्थानीय प्रतिदर्श डेटा (Sample Data) लोड किया गया।"
 
     try:
-        files = {
-            "file": (
-                uploaded_file.name,
-                uploaded_file.getvalue(),
-                uploaded_file.type or "application/octet-stream",
-            )
-        }
-        headers = {"api-subscription-key": api_key}
-        response = requests.post(
-            DOC_EXTRACT_URL,
-            headers=headers,
-            files=files,
-            timeout=8,
-        )
+        import time
+        from sarvamai import SarvamAI
 
-        if response.status_code == 200:
-            res_json = response.json()
-            # If doc-ai parsed structured fields, map them; otherwise use fallback
-            extracted_text = res_json.get("text", "") or str(res_json)
-            data = load_sample_record()
-            data["extracted_text"] = extracted_text
-            return data, False, "दस्तावेज़ सफलतापूर्वक विश्लेषित किया गया (Sarvam Doc-AI)!"
+        client = SarvamAI(api_subscription_key=api_key)
+        file_bytes = uploaded_file.getvalue()
+        file_name = uploaded_file.name
+        mime_type = uploaded_file.type or "application/octet-stream"
+
+        # 1. Start Document AI extraction job with schema
+        job = client.doc_ai.extract(
+            file=[(file_name, file_bytes, mime_type)],
+            schema=json.dumps(LAND_RECORD_SCHEMA),
+        )
+        job_id = job.job_id
+
+        # 2. Poll job status until completed (up to ~20 seconds)
+        results = None
+        for _ in range(10):
+            time.sleep(2)
+            status_resp = client.doc_ai.get_status(job_id)
+            if status_resp.status == "completed":
+                results = client.doc_ai.get_results(job_id)
+                break
+            elif status_resp.status in ["failed", "rejected"]:
+                raise RuntimeError(f"Sarvam Doc-AI जॉब विफल हुआ ({status_resp.status})")
+
+        # 3. Populate dynamic record directly from OCR result
+        if results and hasattr(results, "result") and isinstance(results.result, dict):
+            extracted = results.result
+            
+            data = {
+                "khatedar": extracted.get("khatedar") or "अभिलेख में अस्पष्ट / अनुपलब्ध",
+                "village_tehsil": extracted.get("village_tehsil") or "अभिलेख में अस्पष्ट / अनुपलब्ध",
+                "khasra_no": extracted.get("khasra_no") or "अभिलेख में अस्पष्ट / अनुपलब्ध",
+                "recorded_area": extracted.get("recorded_area") or "अभिलेख में अस्पष्ट / अनुपलब्ध",
+                "khata_number": extracted.get("khata_number") or "N/A",
+                "fasli_year": extracted.get("fasli_year") or "N/A",
+                "land_category": extracted.get("land_category") or "राजस्व भूमि (अभिलेखीय)",
+                "revenue_tax": extracted.get("revenue_tax") or "N/A",
+                "remarks": extracted.get("remarks") or "कोई विशिष्ट कैफियत दर्ज नहीं है।",
+                "extracted_text": json.dumps(extracted, ensure_ascii=False, indent=2),
+            }
+            return data, False, f"दस्तावेज़ सफलतापूर्वक विश्लेषित किया गया ({file_name})!"
         else:
-            return load_sample_record(), True, f"Doc-AI सेवा अनुपलब्ध ({response.status_code}) - स्थानीय प्रतिदर्श डेटा सक्रिय।"
+            return load_sample_record(), True, "समय समाप्ति (Timeout): स्थानीय प्रतिदर्श डेटा सक्रिय।"
     except Exception as exc:
-        return load_sample_record(), True, f"त्वरित स्थानीय फ़ालबैक सक्रिय: {str(exc)[:60]}"
+        return load_sample_record(), True, f"Doc-AI फ़ालबैक सक्रिय: {str(exc)[:60]}"
 
 
 # ---------------------------------------------------------
